@@ -44,3 +44,11 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
 AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+AI_SUMMARY_MAX_WORDS = int(os.getenv("AI_SUMMARY_MAX_WORDS", "80"))
+AI_SUMMARIZE_LIMIT = int(os.getenv("AI_SUMMARIZE_LIMIT", "100"))
+AI_CONCURRENCY = int(os.getenv("AI_CONCURRENCY", "5"))
+
+# Airtable
+AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY", "")
+AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID", "")
+AIRTABLE_JOBS_TABLE = os.getenv("AIRTABLE_JOBS_TABLE", "Jobs")

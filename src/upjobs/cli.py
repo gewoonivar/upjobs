@@ -7,7 +7,9 @@ from pathlib import Path
 import typer
 
 from upjobs import config, utils
+from upjobs.ai import summarize_jobs
 from upjobs.connectors import supabase as sbx
+from upjobs.connectors.airtable import batch_upsert_jobs, get_jobs_table
 from upjobs.connectors.sheets import (
     ensure_worksheet,
     open_spreadsheet,
@@ -62,6 +64,9 @@ JOBS_HEADERS = [
     "url",
     "title",
     "description",
+    "description_summary",
+    "description_summary_model",
+    "description_summary_tokens",
     "skills",
     "created_on",
     "published_on",
@@ -189,6 +194,45 @@ def run_all(headless: bool = True, timeout_ms: int = 30000) -> None:
     # Step 3: Deduplicate and upsert to Supabase
     jobs_buffer = _dedupe_jobs(jobs_buffer)
     search_results_buffer = _dedupe_search_results(search_results_buffer)
+
+    # Step 3.1: Summarize job descriptions
+    try:  # noqa: BLE001
+        # Preload existing summaries from DB so we don't re-summarize and incur cost
+        job_ids = [j.get("job_id") for j in jobs_buffer if j.get("job_id")]
+        if job_ids:
+            try:  # noqa: BLE001
+                existing = (
+                    sb.table("jobs")
+                    .select("job_id,description_summary")
+                    .in_("job_id", job_ids)
+                    .execute()
+                    .data
+                    or []
+                )
+                id_to_summary = {
+                    r.get("job_id"): r.get("description_summary")
+                    for r in existing
+                    if r.get("description_summary")
+                }
+                for j in jobs_buffer:
+                    jid = j.get("job_id")
+                    if jid in id_to_summary:
+                        j["description_summary"] = id_to_summary[jid]
+            except Exception:  # noqa: BLE001
+                pass
+
+        asyncio.run(
+            summarize_jobs(
+                jobs_buffer,
+                max_words=config.AI_SUMMARY_MAX_WORDS,
+                model=config.AI_MODEL,
+                limit=config.AI_SUMMARIZE_LIMIT,
+                concurrency=config.AI_CONCURRENCY,
+            )
+        )
+        typer.echo("Summarized job descriptions")
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"Summary step skipped: {e}")
 
     for s in scrape_requests:
         upsert_scrape_request(sb, s)
@@ -438,6 +482,16 @@ def sheets_pull() -> None:
         f"search_results.is_applied: {len(sr_updates)}, "
         f"notes: +{len(notes_new)}/~{len(notes_update)}, apps: +{len(apps_new)}/~{len(apps_update)})"
     )
+
+
+@app.command()
+def airtable_push() -> None:
+    """Push the Supabase jobs table to Airtable (upsert by job_id)."""
+    sb = get_sb()
+    jobs_rows = sbx.fetch_jobs(sb, limit=20000)
+    table = get_jobs_table()
+    batch_upsert_jobs(table, jobs_rows, batch_size=10)
+    typer.echo(f"Airtable push complete (jobs: {len(jobs_rows)})")
 
 
 if __name__ == "__main__":

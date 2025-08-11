@@ -62,7 +62,9 @@ def fetch_jobs(client: Client, limit: int = 20000) -> List[dict[str, Any]]:
         "duration_label,connect_price,job_type,engagement,proposals_tier,tier_text,"
         "fixed_budget,weekly_budget,hourly_budget_min,hourly_budget_max,currency,"
         "client_country,client_total_spent,client_payment_verified,client_total_reviews,"
-        "client_avg_feedback,is_sts_vector_search_result,relevance_encoded,is_applied,saved"
+        "client_avg_feedback,is_sts_vector_search_result,relevance_encoded,"
+        "description_summary,description_summary_model,description_summary_tokens,"
+        "is_applied,saved"
     )
     return (client.table("jobs").select(cols).limit(limit).execute().data) or []
 

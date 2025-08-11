@@ -10,6 +10,7 @@ dependencies = [
   "gspread",
   "google-auth",
   "google-auth-oauthlib",
+  "pyairtable",
   "python-dotenv",
   "pyyaml",
   "pandas",
@@ -17,6 +18,7 @@ dependencies = [
   "supabase",
   "gotrue",
   "jinja2",
+  "openai>=1.51.0",
   "httpx",
   "ipykernel>=6.30.1",
 ]
