@@ -109,9 +109,10 @@ def upsert_rows(
             [
                 {"range": f"A{row_num}:{last_col}{row_num}", "values": [vals]}
                 for row_num, vals in chunk
-            ]
+            ],
+            value_input_option="USER_ENTERED",
         )
 
     # Appends
     for i in range(0, len(appends), batch_size):
-        ws.append_rows(appends[i : i + batch_size], value_input_option="RAW")
+        ws.append_rows(appends[i : i + batch_size], value_input_option="USER_ENTERED")

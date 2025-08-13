@@ -91,6 +91,7 @@ JOBS_HEADERS = [
     "relevance_encoded",
     "is_applied",
     "saved",
+    "create_date",
 ]
 SR_HEADERS = ["search_id", "job_id", "proposals_tier", "is_applied", "search_job_key"]
 SC_HEADERS = ["search_id", "query", "page", "filepath", "query_timestamp", "processed"]
@@ -194,6 +195,24 @@ def run_all(headless: bool = True, timeout_ms: int = 30000) -> None:
     # Step 3: Deduplicate and upsert to Supabase
     jobs_buffer = _dedupe_jobs(jobs_buffer)
     search_results_buffer = _dedupe_search_results(search_results_buffer)
+
+    # Step 3.0: Derive create_date (DD-MM-YYYY) from created_on if missing
+    from datetime import datetime
+
+    for j in jobs_buffer:
+        if j.get("create_date"):
+            continue
+        created_on = j.get("created_on")
+        if not created_on or not isinstance(created_on, str):
+            continue
+        iso = created_on.replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(iso)
+            # Store ISO (YYYY-MM-DD) for Postgres DATE; format in Sheets as needed
+            j["create_date"] = dt.date().isoformat()
+        except Exception:
+            # leave unset if parsing fails
+            pass
 
     # Step 3.1: Summarize job descriptions
     try:  # noqa: BLE001
